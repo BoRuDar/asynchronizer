@@ -12,8 +12,8 @@ var (
 type call func(ctx context.Context) (Result, error)
 
 type Result struct {
-	Name   string
-	Result interface{}
+	Identifier string // should be unique
+	Result     interface{}
 }
 
 func ExecuteAsync(ctx context.Context, fn ...call) ([]Result, error) {
