@@ -1,14 +1,29 @@
+// go:go test -race -v -cover -count 1 .
 package asynchronizer
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
 )
 
+var (
+	testErr = errors.New("test err")
+)
+
 func testJob1(_ context.Context) (Result, error) {
 	return Result{"testJob1", "testJob1"}, nil
+}
+
+func testJob2(_ context.Context) (Result, error) {
+	return Result{"testJob2", ""}, testErr
+}
+
+func testJob3(_ context.Context) (Result, error) {
+	time.Sleep(10 * time.Millisecond)
+	return Result{"testJob3", ""}, nil
 }
 
 func TestExecuteAsyncOK(t *testing.T) {
@@ -41,6 +56,8 @@ func TestExecuteAsyncOK(t *testing.T) {
 }
 
 func TestExecuteAsyncErrors(t *testing.T) {
+	ctxWithTimeout, _ := context.WithTimeout(context.TODO(), 10*time.Millisecond)
+
 	testCases := []struct {
 		name        string
 		ctx         context.Context
@@ -56,9 +73,23 @@ func TestExecuteAsyncErrors(t *testing.T) {
 
 		{
 			name:        "no functions for the execution",
-			ctx:         nil,
+			ctx:         context.TODO(),
 			jobs:        nil,
 			expectedErr: ErrNothingToExecute,
+		},
+
+		{
+			name:        "custom error",
+			ctx:         ctxWithTimeout,
+			jobs:        []call{testJob1, testJob2},
+			expectedErr: testErr,
+		},
+
+		{
+			name:        "ctx timeout error",
+			ctx:         ctxWithTimeout,
+			jobs:        []call{testJob1, testJob1, testJob3},
+			expectedErr: context.DeadlineExceeded,
 		},
 	}
 
@@ -69,5 +100,16 @@ func TestExecuteAsyncErrors(t *testing.T) {
 				t.Fatalf(`expected error: [%v], but got: [%v]`, test.expectedErr, gotErr)
 			}
 		})
+	}
+}
+
+func BenchmarkName(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ctx, _ := context.WithTimeout(context.TODO(), 5*time.Millisecond)
+
+		b.StartTimer()
+		_, _ = ExecuteAsync(ctx, testJob1, testJob1)
+		b.StopTimer()
 	}
 }

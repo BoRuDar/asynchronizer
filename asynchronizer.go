@@ -42,7 +42,6 @@ func ExecuteAsync(ctx context.Context, fn ...call) ([]Result, error) {
 		go func(f call) {
 			r, err := f(ctx)
 			if err != nil {
-				cancel()
 				errCh <- err
 				return
 			}
