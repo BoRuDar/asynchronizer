@@ -26,12 +26,12 @@ func ExecuteAsync(ctx context.Context, fn ...call) ([]Result, error) {
 		counter int
 		jobs    = len(fn)
 		resCh   = make(chan Result, jobs)
-		errCH   = make(chan error, jobs)
+		errCh   = make(chan error, jobs)
 		results = make([]Result, 0, jobs)
 	)
 	defer func() {
 		close(resCh)
-		close(errCH)
+		close(errCh)
 	}()
 
 	for _, f := range fn {
@@ -39,7 +39,7 @@ func ExecuteAsync(ctx context.Context, fn ...call) ([]Result, error) {
 			r, err := f(ctx)
 			if err != nil {
 				cancel()
-				errCH <- err
+				errCh <- err
 				return
 			}
 
@@ -61,7 +61,7 @@ func ExecuteAsync(ctx context.Context, fn ...call) ([]Result, error) {
 				return results, nil
 			}
 
-		case err := <-errCH: // cancel in case of an error, no need to wait
+		case err := <-errCh: // cancel in case of an error, no need to wait
 			cancel()
 			return nil, err
 

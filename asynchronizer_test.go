@@ -17,9 +17,6 @@ func SomeJob(ctx context.Context) (Result, error) {
 	fmt.Println(ctx.Value("test"))
 
 	var s = fmt.Sprint("name ", n)
-	//if n%2 == 0 {
-	//	return Result{fmt.Sprint("name ", n), s}, fmt.Errorf("test err")
-	//}
 	time.Sleep(time.Duration(n) * time.Second)
 
 	return Result{s, s}, nil
