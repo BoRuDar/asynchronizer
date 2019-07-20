@@ -1,4 +1,3 @@
-// go:go test -race -v -cover -count 1 .
 package asynchronizer
 
 import (
