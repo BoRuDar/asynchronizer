@@ -7,6 +7,7 @@ import (
 
 var (
 	ErrNothingToExecute = errors.New("nothing to execute")
+	ErrNilContext       = errors.New("nil context")
 )
 
 type call func(ctx context.Context) (Result, error)
@@ -19,6 +20,9 @@ type Result struct {
 func ExecuteAsync(ctx context.Context, fn ...call) ([]Result, error) {
 	if len(fn) == 0 {
 		return nil, ErrNothingToExecute
+	}
+	if ctx == nil {
+		return nil, ErrNilContext
 	}
 
 	ctx, cancel := context.WithCancel(ctx)

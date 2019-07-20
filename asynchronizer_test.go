@@ -2,41 +2,40 @@ package asynchronizer
 
 import (
 	"context"
-	"fmt"
-	"math/rand"
 	"strings"
 	"testing"
 	"time"
 )
 
-func SomeJob(ctx context.Context) (Result, error) {
-	rand.Seed(time.Now().UnixNano())
-	n := rand.Intn(5) + 1
-	fmt.Println("t: ", n)
-
-	fmt.Println(ctx.Value("test"))
-
-	var s = fmt.Sprint("name ", n)
-	time.Sleep(time.Duration(n) * time.Second)
-
-	return Result{s, s}, nil
+func testJob1(_ context.Context) (Result, error) {
+	return Result{"testJob1", "testJob1"}, nil
 }
 
-func TestName(t *testing.T) {
-	ctx, _ := context.WithTimeout(context.TODO(), 5*time.Second)
+func TestExecuteAsyncOK(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Millisecond)
+	defer cancel()
 
-	ctx = context.WithValue(ctx, "test", "test")
+	const expectedResult = `testJob1-testJob1`
 
-	res, err := ExecuteAsync(ctx, SomeJob, SomeJob, SomeJob, SomeJob)
-	fmt.Println(res, err)
+	res, err := ExecuteAsync(ctx, testJob1, testJob1)
+	if err != nil {
+		t.Fatal(`unexpected error: `, err)
+	}
+
+	if len(res) != 2 {
+		t.Fatal(`wrong number of results: `, len(res))
+	}
 
 	var ss []string
 	for _, r := range res {
 		s, ok := r.Result.(string)
-		if !ok {
-			continue
+		if ok {
+			ss = append(ss, s)
 		}
-		ss = append(ss, s)
 	}
-	t.Log(strings.Join(ss, "-"))
+
+	gotResult := strings.Join(ss, "-")
+	if gotResult != expectedResult {
+		t.Fatalf(`expected: [%s], but got: [%s]`, expectedResult, gotResult)
+	}
 }
