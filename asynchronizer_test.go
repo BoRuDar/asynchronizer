@@ -103,7 +103,7 @@ func TestExecuteAsyncErrors(t *testing.T) {
 	}
 }
 
-func BenchmarkName(b *testing.B) {
+func BenchmarkExecuteAsync(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ctx, _ := context.WithTimeout(context.TODO(), 5*time.Millisecond)
