@@ -39,3 +39,35 @@ func TestExecuteAsyncOK(t *testing.T) {
 		t.Fatalf(`expected: [%s], but got: [%s]`, expectedResult, gotResult)
 	}
 }
+
+func TestExecuteAsyncErrors(t *testing.T) {
+	testCases := []struct {
+		name        string
+		ctx         context.Context
+		jobs        []call
+		expectedErr error
+	}{
+		{
+			name:        "nil context",
+			ctx:         nil,
+			jobs:        []call{testJob1},
+			expectedErr: ErrNilContext,
+		},
+
+		{
+			name:        "no functions for the execution",
+			ctx:         nil,
+			jobs:        nil,
+			expectedErr: ErrNothingToExecute,
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			if _, gotErr := ExecuteAsync(test.ctx, test.jobs...); gotErr != test.expectedErr {
+				t.Fatalf(`expected error: [%v], but got: [%v]`, test.expectedErr, gotErr)
+			}
+		})
+	}
+}
