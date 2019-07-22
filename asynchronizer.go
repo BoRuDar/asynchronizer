@@ -34,9 +34,9 @@ func ExecuteAsync(ctx context.Context, fn ...call) ([]Result, error) {
 		errCh   = make(chan error, jobs)
 		results = make([]Result, 0, jobs)
 		wg      = &sync.WaitGroup{}
-		err     error
 	)
 	defer func() {
+		wg.Wait()
 		close(resCh)
 		close(errCh)
 	}()
@@ -59,7 +59,6 @@ func ExecuteAsync(ctx context.Context, fn ...call) ([]Result, error) {
 		}(f)
 	}
 
-outer:
 	for {
 		select {
 		case res := <-resCh:
@@ -67,23 +66,15 @@ outer:
 			counter++
 
 			if counter == jobs {
-				break outer
+				return results, nil
 			}
 
-		case e := <-errCh: // cancel in case of an error, no need to wait
+		case err := <-errCh: // cancel in case of an error, no need to wait
 			cancel()
-			err = e
-			break outer
+			return nil, err
 
 		case <-ctx.Done(): // global cancellation or timeout
-			err = ctx.Err()
-			break outer
+			return nil, ctx.Err()
 		}
 	}
-
-	wg.Wait()
-	if err != nil {
-		return nil, err
-	}
-	return results, nil
 }
