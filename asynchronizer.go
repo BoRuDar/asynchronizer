@@ -3,6 +3,7 @@ package asynchronizer
 import (
 	"context"
 	"errors"
+	"sync"
 )
 
 var (
@@ -32,6 +33,8 @@ func ExecuteAsync(ctx context.Context, fn ...call) ([]Result, error) {
 		resCh   = make(chan Result, jobs)
 		errCh   = make(chan error, jobs)
 		results = make([]Result, 0, jobs)
+		wg      = &sync.WaitGroup{}
+		err     error
 	)
 	defer func() {
 		close(resCh)
@@ -39,21 +42,24 @@ func ExecuteAsync(ctx context.Context, fn ...call) ([]Result, error) {
 	}()
 
 	for _, f := range fn {
+		wg.Add(1)
 		go func(f call) {
+			defer wg.Done()
 			r, err := f(ctx)
-			if err != nil {
-				errCh <- err
-				return
-			}
-
 			select {
-			case <-ctx.Done(): // do not push results to the channel
+			case <-ctx.Done():
+				return
 			default:
+				if err != nil {
+					errCh <- err
+					return
+				}
 				resCh <- r
 			}
 		}(f)
 	}
 
+outer:
 	for {
 		select {
 		case res := <-resCh:
@@ -61,15 +67,23 @@ func ExecuteAsync(ctx context.Context, fn ...call) ([]Result, error) {
 			counter++
 
 			if counter == jobs {
-				return results, nil
+				break outer
 			}
 
-		case err := <-errCh: // cancel in case of an error, no need to wait
+		case e := <-errCh: // cancel in case of an error, no need to wait
 			cancel()
-			return nil, err
+			err = e
+			break outer
 
 		case <-ctx.Done(): // global cancellation or timeout
-			return nil, ctx.Err()
+			err = ctx.Err()
+			break outer
 		}
 	}
+
+	wg.Wait()
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
 }

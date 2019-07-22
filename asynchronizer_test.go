@@ -128,7 +128,7 @@ func TestExecuteAsyncErrors(t *testing.T) {
 
 		{
 			name:        "custom error",
-			ctx:         ctxWithTimeout,
+			ctx:         context.TODO(),
 			jobs:        []call{testJob1, testJob2},
 			expectedErr: testErr,
 		},
